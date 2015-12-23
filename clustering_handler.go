@@ -89,7 +89,6 @@ func ClusteringHandler(work tm.WorkRequest, worker_id int) {
 
 		// update news
 		n.Update(bson.M{"_id": item.Id}, bson.M{"$set": bson.M{
-			"dictversion": item.DictVersion,
 			"cluster": mgo.DBRef{
 				Collection: "clusters",
 				Id:         cluster_id,
