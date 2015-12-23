@@ -18,34 +18,39 @@ type Item struct {
 	Date         time.Time
 	Lang         string
 	WordChecksum []string
-	WordMap      []MapItem
+	WordMap      []WordMapItem
 	DictVersion  int
 	Cluster      mgo.DBRef
 	vector       map[int]float64
 }
 
-type MapItem struct {
+type WordMapItem struct {
 	Word  string
 	Freq  int
 	Morph string
 }
 
-// Calculate vector
+// Calculate Vector
 func (this *Item) calcVector() {
-	if this.vector == nil {
-		this.vector = make(map[int]float64)
+	this.vector = make(map[int]float64)
 
-		var tf float64
-		var idf float64
-		//lenght := len(this.WordMap)
+	var tf float64
+	var idf float64
 
-		for _, value := range this.WordMap {
-			tf = 0.5 + 0.5*float64(value.Freq)/float64(this.getMaxWordFreq())
-			idf = float64(math.Log(float64(dict_version.Documents) / float64(dictionary[DictKey{this.Lang, value.Word}].Cnt)))
+	for _, value := range this.WordMap {
+		tf = 0.5 + 0.5*float64(value.Freq)/float64(this.getMaxWordFreq())
+		idf = float64(math.Log(float64(dict_version.Documents) / float64(dictionary[DictKey{this.Lang, value.Word}].Cnt)))
 
-			this.vector[dictionary[DictKey{this.Lang, value.Word}].Index] = tf * idf
-		}
+		this.vector[dictionary[DictKey{this.Lang, value.Word}].Index] = tf * idf
 	}
+}
+
+func (this *Item) GetVector() map[int]float64 {
+	if this.vector == nil {
+		this.calcVector()
+	}
+
+	return this.vector
 }
 
 func (this *Item) getMaxWordFreq() int {

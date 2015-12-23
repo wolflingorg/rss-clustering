@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"gopkg.in/mgo.v2/bson"
 	tm "task-manager"
 )
@@ -13,8 +12,7 @@ func AddTasksHandler() {
 	// try to find feeds to update
 	limit := config.Handler.Tasks - tm.GetTasksCount()
 	if limit <= 0 {
-		// TODO delete this
-		fmt.Printf("\nTasks didnt add. %d active tasks count\n", tm.GetTasksCount())
+		LogInfo.Printf("Tasks didnt add. %d active tasks count\n", tm.GetTasksCount())
 		return
 	}
 
@@ -24,7 +22,7 @@ func AddTasksHandler() {
 		"_id":         bson.M{"$nin": tm.GetTasksIds()},
 	}).Sort("date").Limit(limit).All(&items)
 	if err != nil {
-		panic(err)
+		LogError.Fatalf("Couldnt get mongodb result %s\n", err)
 	}
 
 	// set items to work channel
@@ -33,6 +31,7 @@ func AddTasksHandler() {
 		tm.NewWork(work)
 	}
 
-	// TODO delete this
-	fmt.Printf("\n%d tasks added\n", len(items))
+	if len(items) > 0 {
+		LogInfo.Printf("%d tasks added\n", len(items))
+	}
 }

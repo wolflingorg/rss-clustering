@@ -1,11 +1,11 @@
 package main
 
 import (
-	"fmt"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"math"
 	tm "task-manager"
+	"time"
 )
 
 func ClusteringHandler(work tm.WorkRequest, worker_id int) {
@@ -14,9 +14,6 @@ func ClusteringHandler(work tm.WorkRequest, worker_id int) {
 
 	// check that work.Data equal Item interface
 	if item, ok := work.Data.(Item); ok {
-		// calc vector
-		item.calcVector()
-
 		// find similar news
 		var items []Item
 		err := n.Find(bson.M{
@@ -26,7 +23,7 @@ func ClusteringHandler(work tm.WorkRequest, worker_id int) {
 			"_id":          bson.M{"$ne": item.Id},
 		}).All(&items)
 		if err != nil {
-			panic(err)
+			LogError.Fatalf("Couldnt get similar news. Something wrong with mongodb: %s\n", err)
 		}
 
 		// find cluster id
@@ -34,8 +31,7 @@ func ClusteringHandler(work tm.WorkRequest, worker_id int) {
 		var max_angle float64
 
 		for _, value := range items {
-			value.calcVector()
-			angle := getAngle(item.vector, value.vector)
+			angle := getAngle(item.GetVector(), value.GetVector())
 
 			if angle >= config.Clustering.Porog {
 				if angle > max_angle {
@@ -93,13 +89,15 @@ func ClusteringHandler(work tm.WorkRequest, worker_id int) {
 
 		// update news
 		n.Update(bson.M{"_id": item.Id}, bson.M{"$set": bson.M{
+			"dictversion": item.DictVersion,
 			"cluster": mgo.DBRef{
 				Collection: "clusters",
 				Id:         cluster_id,
 			},
+			"clusterdate": time.Now(),
 		}})
 
-		fmt.Printf("\tWorker %d OK\n", worker_id)
+		LogInfo.Printf("Worker %d OK\n", worker_id)
 	}
 }
 

@@ -2,8 +2,9 @@ package main
 
 import (
 	"flag"
-	//"fmt"
 	"gopkg.in/mgo.v2"
+	"log"
+	"os"
 	"strings"
 	tm "task-manager"
 	"time"
@@ -15,6 +16,8 @@ var (
 	db           *mgo.Database         // Data Base
 	dict_version *DictionaryVersion    // Lasted dictionary version
 	dictionary   map[DictKey]DictValue // Local dictionary map
+	LogError     *log.Logger           // Error logger
+	LogInfo      *log.Logger           // Info logger
 )
 
 func main() {
@@ -25,10 +28,24 @@ func main() {
 	// config
 	LoadConfig(config, CONFIG_PATH)
 
+	// log file
+	f, err := os.OpenFile(config.LogPath, os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
+	if err != nil {
+		log.Fatalf("Error opening log file: %s\n", err)
+	}
+
+	// loggers
+	LogInfo = log.New(f,
+		"INFO: ",
+		log.Ldate|log.Ltime)
+	LogError = log.New(f,
+		"ERROR: ",
+		log.Ldate|log.Ltime|log.Lshortfile)
+
 	// connect to db
 	session, err := mgo.Dial(strings.Join(config.Db.Host, ","))
 	if err != nil {
-		panic(err)
+		LogError.Fatalf("Couldnt connect to mongodb server %s", err)
 	}
 	defer session.Close()
 	session.SetMode(mgo.Monotonic, true)
@@ -47,6 +64,12 @@ func main() {
 	for {
 		select {
 		case <-time.After(config.Handler.Interval):
+			tmp := GetLastDictionaryVersion()
+			if tmp.Id > dict_version.Id {
+				dict_version = tmp
+				UpdateDictionaryMap()
+			}
+
 			AddTasksHandler()
 		}
 	}
