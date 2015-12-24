@@ -52,7 +52,11 @@ func main() {
 	db = session.DB("rss")
 
 	// start task manager
-	tm.StartDispatcher(config.Handler.Workers, ClusteringHandler)
+	tm.StartDispatcher(tm.TaskManager{
+		NumWorkers: config.Handler.Workers,
+		NumTasks:   config.Handler.Tasks,
+		Handler:    ClusteringHandler,
+	})
 
 	// current dict version
 	dict_version = GetLastDictionaryVersion()

@@ -95,8 +95,6 @@ func ClusteringHandler(work tm.WorkRequest, worker_id int) {
 			},
 			"clusterdate": time.Now(),
 		}})
-
-		LogInfo.Printf("Worker %d OK\n", worker_id)
 	}
 }
 

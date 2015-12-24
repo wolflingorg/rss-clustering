@@ -2,3 +2,4 @@ config.ini
 /res/
 *.exe
 rss-clustering
+/log/
