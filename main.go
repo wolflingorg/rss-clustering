@@ -87,7 +87,7 @@ func main() {
 				}
 
 				if cur_cluster != nil {
-					wordmap := AppendWordMap(cur_cluster.WordMap, item.WordMap)
+					wordmap, wordchecksum := GetTopWords(item.Lang, AppendWordMap(cur_cluster.WordMap, item.WordMap))
 
 					cur_cluster.Date = item.Date
 					cur_cluster.Items = cur_cluster.Items + 1
@@ -105,7 +105,8 @@ func main() {
 						Id:         item.Id,
 					})
 					cur_cluster.WordMap = wordmap
-					cur_cluster.WordChecksum = GetTopWordChecksum(item.Lang, wordmap)
+					cur_cluster.WordChecksum = wordchecksum
+					cur_cluster.ResetVector()
 				} else {
 					cur_cluster = &Cluster{
 						Id:    bson.NewObjectId(),
@@ -192,7 +193,7 @@ func GetCurCluster(item_vector map[int]float64, same_clusters []*Cluster) *Clust
 
 	for i, _ := range same_clusters {
 		go func(item_vector map[int]float64, cluster *Cluster) {
-			cluster_vector := calcVector(cluster.Lang, cluster.WordMap)
+			cluster_vector := cluster.GetVector()
 			sync_chan <- ClasterAngle{
 				angle:   calcAngle(item_vector, cluster_vector),
 				cluster: cluster,
@@ -220,7 +221,6 @@ func GetTasks() []Item {
 	err := n.Find(bson.M{
 		"dictversion": bson.M{"$lte": dict_version.Id},
 		"status":      2,
-		//"wordscount":  bson.M{"$gte": 50},
 	}).Sort("date").Limit(config.Handler.Tasks).All(&items)
 	if err != nil {
 		LogError.Fatalf("Couldnt get mongodb result %s\n", err)
@@ -362,14 +362,19 @@ func (a VectorByFreq) Len() int           { return len(a) }
 func (a VectorByFreq) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a VectorByFreq) Less(i, j int) bool { return a[i].Freq < a[j].Freq }
 
-func GetTopWordChecksum(lang string, wordmap []WordMapItem) []string {
-	max_checksums := 50
-	var word_checksum []string
+func GetTopWords(lang string, wordmap []WordMapItem) (res_wordmap []WordMapItem, res_wordchecksum []string) {
+	max_checksums := 25
+
 	var vectors []Vector
 
 	vocabulary := make(map[int]string)
 	for _, value := range wordmap {
 		vocabulary[dictionary[DictKey{lang, value.Word}].Index] = value.Word
+	}
+
+	wordmap_by_vocalulary := make(map[int]WordMapItem)
+	for _, value := range wordmap {
+		wordmap_by_vocalulary[dictionary[DictKey{lang, value.Word}].Index] = value
 	}
 
 	for i, value := range calcVector(lang, wordmap) {
@@ -387,8 +392,12 @@ func GetTopWordChecksum(lang string, wordmap []WordMapItem) []string {
 	for i := 0; i < max_checksums; i++ {
 		hasher := md5.New()
 		hasher.Write([]byte(vocabulary[vectors[i].Id]))
-		word_checksum = append(word_checksum, hex.EncodeToString(hasher.Sum(nil)))
+		res_wordchecksum = append(res_wordchecksum, hex.EncodeToString(hasher.Sum(nil)))
 	}
 
-	return word_checksum
+	for i := 0; i < max_checksums; i++ {
+		res_wordmap = append(res_wordmap, wordmap_by_vocalulary[vectors[i].Id])
+	}
+
+	return
 }
