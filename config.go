@@ -4,7 +4,6 @@ package main
 import (
 	"gopkg.in/ini.v1"
 	"log"
-	"time"
 )
 
 type Config struct {
@@ -16,9 +15,7 @@ type Config struct {
 		Host []string
 	}
 	Handler struct {
-		Workers  int
-		Tasks    int
-		Interval time.Duration
+		Tasks int
 	}
 }
 

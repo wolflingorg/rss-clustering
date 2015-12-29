@@ -1,11 +1,5 @@
 package main
 
-import (
-	"sync"
-)
-
-var dict_mutex = &sync.Mutex{}
-
 type Dictionary struct {
 	Lang string
 	Word string
@@ -24,18 +18,16 @@ func UpdateDictionaryMap() {
 	d := db.C("dictionary")
 
 	var words []Dictionary
+	dictionary = make(map[DictKey]DictValue)
 
 	err := d.Find(nil).Sort("_id").All(&words)
 	if err != nil {
 		LogError.Fatalf("Couldnt load dictionary. Something wrong with mongodb: %s\n", err)
 	}
 
-	dict_mutex.Lock()
 	for i, item := range words {
-		dictionary = make(map[DictKey]DictValue)
 		dictionary[DictKey{item.Lang, item.Word}] = DictValue{i, item.Cnt}
 	}
-	dict_mutex.Unlock()
 
 	words = nil
 

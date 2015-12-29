@@ -8,12 +8,14 @@ import (
 )
 
 type Cluster struct {
-	Id    bson.ObjectId `json:"id" bson:"_id,omitempty"`
-	Lang  string
-	Date  time.Time
-	Items int
-	Main  ClusterMainNews
-	News  []mgo.DBRef
+	Id           bson.ObjectId `json:"id" bson:"_id,omitempty"`
+	Lang         string
+	Date         time.Time
+	Items        int
+	WordMap      []WordMapItem
+	WordChecksum []string
+	Main         ClusterMainNews
+	News         []mgo.DBRef
 }
 
 type ClusterMainNews struct {
