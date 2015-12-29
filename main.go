@@ -1,12 +1,15 @@
 package main
 
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"flag"
 	"gopkg.in/mgo.v2"
 	"gopkg.in/mgo.v2/bson"
 	"log"
 	"math"
 	"os"
+	"sort"
 	"strings"
 	"time"
 )
@@ -84,6 +87,8 @@ func main() {
 				}
 
 				if cur_cluster != nil {
+					wordmap := AppendWordMap(cur_cluster.WordMap, item.WordMap)
+
 					cur_cluster.Date = item.Date
 					cur_cluster.Items = cur_cluster.Items + 1
 					cur_cluster.Main = ClusterMainNews{
@@ -99,8 +104,8 @@ func main() {
 						Collection: "news",
 						Id:         item.Id,
 					})
-					cur_cluster.WordMap = item.WordMap
-					cur_cluster.WordChecksum = item.WordChecksum
+					cur_cluster.WordMap = wordmap
+					cur_cluster.WordChecksum = GetTopWordChecksum(item.Lang, wordmap)
 				} else {
 					cur_cluster = &Cluster{
 						Id:    bson.NewObjectId(),
@@ -198,7 +203,7 @@ func GetCurCluster(item_vector map[int]float64, same_clusters []*Cluster) *Clust
 	for i := 0; i < len(same_clusters); i++ {
 		select {
 		case result := <-sync_chan:
-			if result.angle > max_angle {
+			if result.angle >= config.Clustering.Porog && result.angle > max_angle {
 				max_angle = result.angle
 				cur_cluster = result.cluster
 			}
@@ -215,6 +220,7 @@ func GetTasks() []Item {
 	err := n.Find(bson.M{
 		"dictversion": bson.M{"$lte": dict_version.Id},
 		"status":      2,
+		//"wordscount":  bson.M{"$gte": 50},
 	}).Sort("date").Limit(config.Handler.Tasks).All(&items)
 	if err != nil {
 		LogError.Fatalf("Couldnt get mongodb result %s\n", err)
@@ -321,4 +327,68 @@ func calcVector(lang string, wordmap []WordMapItem) map[int]float64 {
 	}
 
 	return vector
+}
+
+func AppendWordMap(wm1 []WordMapItem, wm2 []WordMapItem) []WordMapItem {
+	for _, value := range wm2 {
+		if item, ok := findInWordMapByWord(value.Word, wm1); ok {
+			item.Freq = item.Freq + value.Freq
+		} else {
+			wm1 = append(wm1, value)
+		}
+	}
+
+	return wm1
+}
+
+func findInWordMapByWord(word string, wm []WordMapItem) (*WordMapItem, bool) {
+	for i, value := range wm {
+		if value.Word == word {
+			return &wm[i], true
+		}
+	}
+
+	return &WordMapItem{}, false
+}
+
+type Vector struct {
+	Id   int
+	Freq float64
+}
+
+type VectorByFreq []Vector
+
+func (a VectorByFreq) Len() int           { return len(a) }
+func (a VectorByFreq) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a VectorByFreq) Less(i, j int) bool { return a[i].Freq < a[j].Freq }
+
+func GetTopWordChecksum(lang string, wordmap []WordMapItem) []string {
+	max_checksums := 50
+	var word_checksum []string
+	var vectors []Vector
+
+	vocabulary := make(map[int]string)
+	for _, value := range wordmap {
+		vocabulary[dictionary[DictKey{lang, value.Word}].Index] = value.Word
+	}
+
+	for i, value := range calcVector(lang, wordmap) {
+		vectors = append(vectors, Vector{
+			Id:   i,
+			Freq: value,
+		})
+	}
+	sort.Sort(sort.Reverse(VectorByFreq(vectors)))
+
+	if len(vectors) < max_checksums {
+		max_checksums = len(vectors)
+	}
+
+	for i := 0; i < max_checksums; i++ {
+		hasher := md5.New()
+		hasher.Write([]byte(vocabulary[vectors[i].Id]))
+		word_checksum = append(word_checksum, hex.EncodeToString(hasher.Sum(nil)))
+	}
+
+	return word_checksum
 }
