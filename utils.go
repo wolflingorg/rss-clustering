@@ -6,6 +6,7 @@ import (
 	"sort"
 )
 
+// Return slice of md5 checksums of words from Item.WordMap
 func GetWordchecksum(items []Item) []string {
 	var wordchecksum []string
 
@@ -26,6 +27,7 @@ func stringInSlice(str string, list []string) bool {
 	return false
 }
 
+// return max word frequency from slice of WordMap
 func getMaxWordFreq(wordmap []WordMapItem) int {
 	var max_freq int = 0
 
@@ -38,6 +40,7 @@ func getMaxWordFreq(wordmap []WordMapItem) int {
 	return max_freq
 }
 
+// Concat two wordmaps
 func AppendWordMap(wm1 []WordMapItem, wm2 []WordMapItem) []WordMapItem {
 	for _, value := range wm2 {
 		if item, ok := findInWordMapByWord(value.Word, wm1); ok {
@@ -50,6 +53,7 @@ func AppendWordMap(wm1 []WordMapItem, wm2 []WordMapItem) []WordMapItem {
 	return wm1
 }
 
+// Find WordMap by word
 func findInWordMapByWord(word string, wm []WordMapItem) (*WordMapItem, bool) {
 	for i, value := range wm {
 		if value.Word == word {
@@ -60,6 +64,7 @@ func findInWordMapByWord(word string, wm []WordMapItem) (*WordMapItem, bool) {
 	return &WordMapItem{}, false
 }
 
+// Return TOP WordMap and WordChecksum by TF*IDF weight
 func GetTopWords(lang string, wordmap []WordMapItem) (res_wordmap []WordMapItem, res_wordchecksum []string) {
 	max_words := 25
 
