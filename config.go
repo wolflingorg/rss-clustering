@@ -9,7 +9,9 @@ import (
 type Config struct {
 	LogPath    string
 	Clustering struct {
-		Porog float64
+		Porog        float64
+		WordMap      int
+		WordChecksum int
 	}
 	Db struct {
 		Host []string

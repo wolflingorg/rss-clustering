@@ -23,10 +23,12 @@ type Cluster struct {
 }
 
 type ClusterMainNews struct {
-	Title   string
-	Content string
-	Image   *Image
-	News    mgo.DBRef
+	Title    string
+	Content  string
+	Image    *Image
+	Category string
+	Country  string
+	News     mgo.DBRef
 }
 
 type ClasterAngle struct {
@@ -124,9 +126,11 @@ func UpdateClusterByItem(cur_cluster *Cluster, item Item) {
 	cur_cluster.Date = item.Date
 	cur_cluster.Items = cur_cluster.Items + 1
 	cur_cluster.Main = ClusterMainNews{
-		Title:   item.Title,
-		Content: item.Content,
-		Image:   item.Image,
+		Title:    item.Title,
+		Content:  item.Content,
+		Image:    item.Image,
+		Category: item.Category,
+		Country:  item.Country,
 		News: mgo.DBRef{
 			Collection: "news",
 			Id:         item.Id,
@@ -149,9 +153,11 @@ func NewClusterByItem(item Item) *Cluster {
 		Date:  item.Date,
 		Items: 1,
 		Main: ClusterMainNews{
-			Title:   item.Title,
-			Content: item.Content,
-			Image:   item.Image,
+			Title:    item.Title,
+			Content:  item.Content,
+			Image:    item.Image,
+			Category: item.Category,
+			Country:  item.Country,
 			News: mgo.DBRef{
 				Collection: "news",
 				Id:         item.Id,

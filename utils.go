@@ -66,7 +66,8 @@ func findInWordMapByWord(word string, wm []WordMapItem) (*WordMapItem, bool) {
 
 // Return TOP WordMap and WordChecksum by TF*IDF weight
 func GetTopWords(lang string, wordmap []WordMapItem) (res_wordmap []WordMapItem, res_wordchecksum []string) {
-	max_words := 25
+	max_wordmap := config.Clustering.WordMap
+	max_wordchecksum := config.Clustering.WordChecksum
 
 	var vectors []Vector
 
@@ -88,17 +89,21 @@ func GetTopWords(lang string, wordmap []WordMapItem) (res_wordmap []WordMapItem,
 	}
 	sort.Sort(sort.Reverse(VectorByFreq(vectors)))
 
-	if len(vectors) < max_words {
-		max_words = len(vectors)
+	if len(vectors) < max_wordmap {
+		max_wordmap = len(vectors)
 	}
 
-	for i := 0; i < max_words; i++ {
+	if len(vectors) < max_wordchecksum {
+		max_wordchecksum = len(vectors)
+	}
+
+	for i := 0; i < max_wordchecksum; i++ {
 		hasher := md5.New()
 		hasher.Write([]byte(vocabulary[vectors[i].Id]))
 		res_wordchecksum = append(res_wordchecksum, hex.EncodeToString(hasher.Sum(nil)))
 	}
 
-	for i := 0; i < max_words; i++ {
+	for i := 0; i < max_wordmap; i++ {
 		res_wordmap = append(res_wordmap, wordmap_by_vocalulary[vectors[i].Id])
 	}
 

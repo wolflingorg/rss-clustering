@@ -22,6 +22,8 @@ type Item struct {
 	Cluster      mgo.DBRef
 	ClusterDate  time.Time
 	Status       uint
+	Category     string
+	Country      string
 }
 
 type WordMapItem struct {
